@@ -495,4 +495,43 @@ describe("Algorand Smart Contracts - Execute transaction", function () {
 		assert.equal(alice.balance(), initialBalance + BigInt(amount));
 	});
 
+	it("Should unfunded accounts be able to issue transactions, through execute transaction", () => {
+		const amount = 1e4 + 10;
+		const fee = 3000;
+		// group with fee distribution. Pooled transaction fee
+		const groupTx: types.ExecParams[] = [
+			{
+				type: types.TransactionType.TransferAlgo,
+				sign: types.SignType.SecretKey,
+				fromAccount: john.account,
+				toAccountAddr: alice.address,
+				amountMicroAlgos: amount,
+				payFlags: { totalFee: fee }, // this covers fee of entire group txns.
+			},
+			{
+				type: types.TransactionType.TransferAlgo,
+				sign: types.SignType.SecretKey,
+				fromAccount: alice.account,
+				toAccountAddr: elonMusk.address,
+				amountMicroAlgos: amount,
+				payFlags: { totalFee: 0 }, // with 0 txn fee.
+			},
+			{
+				type: types.TransactionType.TransferAlgo,
+				sign: types.SignType.SecretKey,
+				fromAccount: elonMusk.account,
+				toAccountAddr: john.address,
+				amountMicroAlgos: amount,
+				payFlags: { totalFee: 0 }, // with 0 txn fee.
+			},
+		];
+
+		runtime.executeTx(groupTx);
+
+		syncAccounts();
+		assert.equal(john.balance(), initialBalance - BigInt(fee));
+		assert.equal(alice.balance(), initialBalance);
+		assert.equal(elonMusk.balance(), initialBalance);
+	});
+
 });
